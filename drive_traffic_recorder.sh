@@ -1,8 +1,11 @@
 #!/bin/bash
 #calculate the dates for training and testing
-current_wd=$PWD
+current_wd="/home/frank/Exploration/traffic_count/"
 current_date=$(date +"%Y-%m-%d")
 yesterday_date=$(date +%Y-%m-%d -d "$current_date - 1 day")
+#current_date="2017-07-02"
+#yesterday_date="2017-06-30"
+
 echo "current_date: "$current_date
 echo "yesterday_date: "$yesterday_date
 echo "Current Working Directory: "$current_wd
@@ -75,11 +78,11 @@ do
 					grep -rl $sql_file -e "$yesterday_date" | xargs sed -i "s/$yesterday_date/2017-06-22/g"
 					grep -rl $sql_file -e "$current_date" | xargs sed -i "s/$current_date/2017-06-23/g"
 
-					#remove the empty lines and append the new data to the historical data
-					sed  '/^\s*$/d' tmp.txt >> tmp1.txt
-					awk '!a[$0]++' tmp1.txt > tmp2.txt
+					#remove the empty lines, append to the historical file, remove duplicates
+					sed  '/^\s*$/d' tmp.txt >> $result_file
+					awk '!a[$0]++' $result_file > tmp2.txt
 					cp tmp2.txt $result_file
-					rm tmp.txt tmp1.txt tmp2.txt
+					rm tmp.txt tmp2.txt
 				fi
 				#sort the new data and get the maximum 
 				sort -k4nr $result_file > tmp.txt
@@ -87,8 +90,8 @@ do
 				new_max_count_file=$(readlink -f new_max_count.txt)
 				#invoke the Rscipt
 				echo "bash part ends, now compare the old_max_count and new_max_count in R"
-				Rscipt="update_max_count.R"
-				./$Rscipt $site $page_type $period $device $new_max_count_file
+				Rscipt=${current_wd}/update_max_count.R
+				  $Rscipt $site $page_type $period $device $new_max_count_file
 
 				rm tmp.txt
 			
@@ -100,3 +103,5 @@ done
 
 echo "Now upload the max_count_table file to S3 bucket"
 s3cmd put ~/Exploration/traffic_count/Netshoes_Page_Request_Analytics.csv s3://beveel/statistics/Netshoes_Page_Request_Analytics.csv
+
+scp ~/Exploration/traffic_count/result/* frank@192.168.168.40:~/Exploration/interaction_plots/data/
